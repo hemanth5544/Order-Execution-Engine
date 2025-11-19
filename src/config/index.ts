@@ -24,7 +24,24 @@ export const CONFIG = {
     maxRetries: parseInt(process.env.MAX_RETRIES || '3', 10),
   },
 
- 
+  dex: {
+    simulatedNetworkDelay: {
+      min: 150,
+      max: 300,
+    },
+    executionDelay: {
+      min: 2000,
+      max: 3000,
+    },
+    priceVariance: {
+      raydium: { min: 0.98, max: 1.02 },
+      meteora: { min: 0.97, max: 1.03 },
+    },
+    fees: {
+      raydium: 0.003,
+      meteora: 0.002,
+    },
+  },
 } as const;
 
 export function validateConfig(): void {
