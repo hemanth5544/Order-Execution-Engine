@@ -66,6 +66,49 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
 
+  // ---- NORMAL HTTP ORDER CREATION (We can user in the normal post api if neededd) ----//
+  fastify.post<{ Body: CreateOrderBody }>('/execute', async (request, reply) => {
+    try {
+      const body = createOrderSchema.parse(request.body);
+      const orderId = nanoid(16);
 
+      await database.createOrder({
+        orderId,
+        ...body
+      });
+
+      await orderQueue.addOrder({
+        orderId,
+        ...body
+      });
+
+      return reply.send({
+        success: true,
+        orderId
+      });
+
+    } catch (error) {
+      logger.error(error);
+      return reply.status(400).send({ error: 'Invalid order payload' });
+    }
+  });
+
+
+  // ---- OTHER ROUTES ----//
+  fastify.get('/metrics', async () => ({
+    success: true,
+    data: await orderQueue.getQueueMetrics()
+  }));
+
+  fastify.get<{ Params: { orderId: string } }>('/:orderId', async (request, reply) => {
+    const order = await database.getOrder(request.params.orderId);
+
+    if (!order) {
+      return reply.status(404).send({ success: false, error: 'Order not found' });
+    }
+
+    return reply.send({ success: true, data: order });
+  });
 }
+
 
