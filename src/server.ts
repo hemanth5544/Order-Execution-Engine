@@ -11,6 +11,33 @@ async function buildServer() {
     logger: true,
   });
 
+  await fastify.register(cors, {
+    origin: true,
+    credentials: true,
+  });
+
+  await fastify.register(websocket, {
+    options: {
+      maxPayload: 1048576,
+      clientTracking: true,
+    },
+  });
+
+  fastify.get('/health', async (request, reply) => {
+    return reply.send({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
+
+  await fastify.register(orderRoutes, { prefix: '/api/orders' });
+
+  fastify.addHook('onClose', async () => {
+    logger.info('Server shutting down, closing queue...');
+    await orderQueue.close();
+  });
+
   return fastify;
 }
 
