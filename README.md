@@ -6,7 +6,7 @@ A high-performance order execution engine with DEX routing and real-time WebSock
 
 ## Features
 
-- Real-time DEX routing between Raydium and Meteora
+- Real-time DEX routing between Raydium and Meteora (Mocked tose for now)
 - WebSocket-based order status streaming
 - Concurrent order processing (up to 10 simultaneous orders)
 - Rate limiting (100 orders/minute)
