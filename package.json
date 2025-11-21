@@ -1,5 +1,5 @@
 {
-  "name": "solana-order-execution-engine",
+  "name": "order-execution-engine",
   "version": "1.0.0",
   "description": "DEX order execution engine with WebSocket status updates",
   "main": "dist/server.js",
