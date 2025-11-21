@@ -13,57 +13,56 @@ type CreateOrderBody = z.infer<typeof createOrderSchema>;
 export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
 
   // ---- WEBSOCKET ORDER EXECUTION ----//
-  fastify.get('/execute', { websocket: true }, async (connection: any, request: any) => {
-    const socket = connection.socket;
+fastify.get('/execute/ws', { websocket: true }, async (connection, request) => {
+  const socket = connection;
 
-    try {
-      const body = createOrderSchema.parse(request.query || {});
+  try {
+    const query = request.query as Record<string, unknown>;
+    const body = createOrderSchema.parse({
+      ...query,
+      amountIn: Number(query.amountIn),
+      slippageTolerance: Number(query.slippageTolerance),
+    });
 
-      const orderId = nanoid(16);
+    const orderId = nanoid(16);
 
-      const order = await database.createOrder({
-        orderId,
-        userId: body.userId,
-        orderType: body.orderType,
-        tokenIn: body.tokenIn,
-        tokenOut: body.tokenOut,
-        amountIn: body.amountIn,
-        slippageTolerance: body.slippageTolerance,
-      });
+    const order = await database.createOrder({
+      orderId,
+      userId: body.userId,
+      orderType: body.orderType,
+      tokenIn: body.tokenIn,
+      tokenOut: body.tokenOut,
+      amountIn: body.amountIn,
+      slippageTolerance: body.slippageTolerance,
+    });
 
-      logger.info({ orderId, userId: body.userId }, 'Order created');
+    logger.info({ orderId, userId: body.userId }, 'Order created');
 
-      wsManager.registerConnection(orderId, socket);
+    wsManager.registerConnection(orderId, socket);
 
-      socket.send(JSON.stringify({
-        orderId,
-        status: 'pending',
-        message: 'Order received and queued',
-        timestamp: new Date().toISOString(),
-      }));
+    socket.send(JSON.stringify({
+      orderId,
+      status: 'pending',
+      message: 'Order received and queued',
+      timestamp: new Date().toISOString(),
+    }));
 
-      await orderQueue.addOrder({
-        orderId,
-        userId: body.userId,
-        orderType: body.orderType,
-        tokenIn: body.tokenIn,
-        tokenOut: body.tokenOut,
-        amountIn: body.amountIn,
-        slippageTolerance: body.slippageTolerance,
-      });
+    await orderQueue.addOrder({
+      orderId,
+      userId: body.userId,
+      orderType: body.orderType,
+      tokenIn: body.tokenIn,
+      tokenOut: body.tokenOut,
+      amountIn: body.amountIn,
+      slippageTolerance: body.slippageTolerance,
+    });
 
-      logger.info({ orderId }, 'Order added to execution queue');
-    } catch (error) {
-      logger.error({ error }, 'Error creating order');
-
-      socket.send(JSON.stringify({
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }));
-
-      socket.close();
-    }
-  });
+  } catch (error) {
+    logger.error({ error }, 'Error creating order');
+    socket.send(JSON.stringify({ status:'failed', error: error || "Unknown error" }));
+    socket.close();
+  }
+});
 
 
   // ---- NORMAL HTTP ORDER CREATION (We can user in the normal post api if neededd) ----//
